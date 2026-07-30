@@ -1,0 +1,101 @@
+name: NBA Predict
+
+on:
+  schedule:
+    - cron: '0 13 * * *'  # 21:00 BJT (13:00 UTC)
+  workflow_dispatch:
+
+jobs:
+  predict:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run prediction
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: python3 predict.py > /tmp/output.json 2>/tmp/stderr.txt || (cat /tmp/stderr.txt && exit 1)
+
+      - name: Format message
+        id: format
+        shell: bash
+        run: |
+          python3 << 'PYEOF'
+          import json, os
+          from datetime import datetime, timezone, timedelta
+
+          data = json.load(open('/tmp/output.json'))
+          bjt = datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d %H:%M')
+          lines = [f'[NBA预测] {bjt}', '=' * 30, '']
+
+          status = data.get('status', '?')
+          preds = data.get('predictions', [])
+
+          if not preds:
+              lines.append('今日无比赛或数据获取失败')
+          else:
+              lines.append(f'待预测：{len(preds)} 场')
+              lines.append('')
+              for p in preds:
+                  lines.append(f'[预测] {p["match"]}')
+                  lines.append(f'  方向：{p["direction"]} {p["stars"]}')
+                  lines.append(f'  比分：{p["predicted_score"]}（分差 {p["predicted_margin"]:+.1f}）')
+                  if p.get("spread_prediction"):
+                      lines.append(f'  让分：{p["spread_prediction"]}')
+                  if p.get("total_prediction"):
+                      lines.append(f'  大小分：{p["total_prediction"]}')
+                  if p.get("odds_calibration"):
+                      lines.append(f'  {p["odds_calibration"]}')
+                  lines.append('')
+
+          email_body = '\n'.join(lines)
+          print(email_body)
+
+          with open('/tmp/email_body.txt', 'w') as f:
+              f.write(email_body)
+
+          github_output = os.environ.get('GITHUB_OUTPUT', '/tmp/github_output.txt')
+          with open(github_output, 'a') as f:
+              day = bjt.split(' ')[0]
+              f.write(f'subject={day}\n')
+          PYEOF
+
+      - name: Send webhook
+        shell: bash
+        env:
+          FEISHU_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+        run: |
+          python3 << 'PYEOF'
+          import json, os, urllib.request, time
+
+          body = open('/tmp/email_body.txt').read()
+          payload = {"msg_type": "text", "content": {"text": body}}
+          url = os.environ.get('FEISHU_URL', '')
+          if not url:
+              print('ERROR: FEISHU_WEBHOOK_URL secret not configured')
+              exit(1)
+
+          for attempt in range(1, 4):
+              try:
+                  req = urllib.request.Request(url, data=json.dumps(payload).encode(),
+                      headers={'Content-Type': 'application/json'}, method='POST')
+                  resp = urllib.request.urlopen(req, timeout=15)
+                  result = json.loads(resp.read())
+                  print(f"Webhook (attempt {attempt}): {result}")
+                  if result.get('code') == 0:
+                      exit(0)
+              except Exception as e:
+                  print(f"Attempt {attempt} failed: {e}")
+                  if attempt < 3:
+                      time.sleep(5)
+          print("All 3 attempts failed")
+          exit(1)
+          PYEOF
