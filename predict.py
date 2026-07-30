@@ -4,7 +4,16 @@
 import json, os, sys, time, urllib.request
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from config import LEAGUES, ELO, PREDICT, TEAM_CN, ODDS_API_KEY
+from config import LEAGUES, ELO, PREDICT, TEAM_CN
+
+# ODDS_API_KEY — 环境变量优先，配置文件兜底
+ODDS_API_KEY = os.environ.get("ODDS_API_KEY") or ""
+if not ODDS_API_KEY:
+    try:
+        from config import ODDS_API_KEY as _cfg_key
+        ODDS_API_KEY = _cfg_key
+    except ImportError:
+        pass
 
 # ── 路径 ──
 BASE = Path(__file__).parent
