@@ -152,7 +152,9 @@ def run():
     games = fetch_odds_games()
     if not games:
         print("  [warn] 无比赛数据，返回空", file=sys.stderr)
-        return {"league": "nba", "status": "no_data", "predictions": []}
+        output = {"league": "nba", "status": "no_data", "predictions": [], "generated_at": NOW.isoformat()}
+        print(json.dumps(output, ensure_ascii=False, indent=2))
+        return output
 
     print(f"  比赛数: {len(games)}", file=sys.stderr)
 
@@ -213,4 +215,8 @@ def run():
     return output
 
 if __name__ == "__main__":
-    run()
+    result = run()
+    # 确保始终输出 JSON 到 stdout
+    if not isinstance(result.get("predictions"), list):
+        result["predictions"] = []
+    print(json.dumps(result, ensure_ascii=False, indent=2))
