@@ -153,7 +153,6 @@ def run():
     if not games:
         print("  [warn] 无比赛数据，返回空", file=sys.stderr)
         output = {"league": "nba", "status": "no_data", "predictions": [], "generated_at": NOW.isoformat()}
-        print(json.dumps(output, ensure_ascii=False, indent=2))
         return output
 
     print(f"  比赛数: {len(games)}", file=sys.stderr)
