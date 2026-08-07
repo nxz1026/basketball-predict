@@ -2,7 +2,7 @@ name: NBA Predict
 
 on:
   schedule:
-    - cron: '0 13 * * *'  # 21:00 BJT (13:00 UTC)
+    - cron: '33 13 * * *'  # 21:33 BJT (13:33 UTC)
   workflow_dispatch:
 
 jobs:

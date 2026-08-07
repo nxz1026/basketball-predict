@@ -70,22 +70,6 @@ def fetch_odds_games() -> list[dict]:
     games = _get(url)
     return games
 
-def fetch_team_stats() -> dict:
-    """从 balldontlie.io 获取球队赛季场均数据"""
-    stats = {}
-    try:
-        url = "https://api.balldontlie.io/v1/teams"
-        teams = _get(url, {"Authorization": ""})
-        # balldontlie 1.0 doesn't need auth for basic stats
-        url2 = "https://api.balldontlie.io/v1/games?seasons[]=2025&per_page=100"
-        games = _get(url2)
-        # Parse team stats from games
-        # 简化：先返回空，用 league average 兜底
-        return stats
-    except Exception as e:
-        print(f"  [warn] fetch_team_stats failed: {e}", file=sys.stderr)
-        return stats
-
 # ── 预测 ──
 def predict_game(home: str, away: str, ratings: dict,
                  odds_home: float | None, odds_away: float | None,
@@ -103,14 +87,21 @@ def predict_game(home: str, away: str, ratings: dict,
     pred_margin = pred_home_score - pred_away_score
 
     # 方向判断
-    direction = "主胜" if win_prob > 0.5 else "客胜"
-    stars = "★" * min(5, int(abs(win_prob - 0.5) * 20))
+    winner = to_cn(home) if win_prob > 0.5 else to_cn(away)
+    direction = f"{winner} 胜"
+    confidence = abs(win_prob - 0.5) * 2
+    if confidence >= 0.5:
+        stars = "3-star"
+    elif confidence >= 0.3:
+        stars = "2-star"
+    else:
+        stars = "1-star"
 
     # 让分预测
     spread_pred = None
     if spread_line is not None:
-        cover = "主" if pred_margin > spread_line else "客"
-        spread_pred = f"{cover}(+{abs(pred_margin - spread_line):.1f})"
+        cover = "主" if pred_margin > -spread_line else "客"
+        spread_pred = f"{cover}({pred_margin + spread_line:+.1f})"
 
     # 大小分预测
     total_pred = None
@@ -169,23 +160,14 @@ def run():
             for m in bm.get("markets", []):
                 outcomes = m.get("outcomes", [])
                 if m["key"] == "h2h" and len(outcomes) >= 2:
-                    odds_home = outcomes[0]["price"] if outcomes[0]["name"] == home else outcomes[1]["price"]
-                    odds_away = outcomes[1]["price"] if outcomes[0]["name"] == home else outcomes[0]["price"]
-                    # 确保 odds_home 是主队
                     if outcomes[0]["name"] == home:
                         odds_home, odds_away = outcomes[0]["price"], outcomes[1]["price"]
                     else:
                         odds_home, odds_away = outcomes[1]["price"], outcomes[0]["price"]
                 elif m["key"] == "spreads" and len(outcomes) >= 2:
-                    # 让分线：主队有正 point 表示主队受让
                     for o in outcomes:
                         if o["name"] == home:
-                            spread_line = o.get("point", 0)
-                        elif o["name"] == away:
-                            pass  # 客队让分是反的
-                    # 简化：取第一个让分值
-                    if outcomes[0].get("point") is not None:
-                        spread_line = outcomes[0]["point"]
+                            spread_line = o.get("point")
                 elif m["key"] == "totals" and len(outcomes) >= 2:
                     total_line = outcomes[0].get("point", 0)
 
