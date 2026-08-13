@@ -37,24 +37,22 @@ jobs:
           lines = [f'[NBA预测] {bjt}', '=' * 30, '']
 
           status = data.get('status', '?')
-          preds = data.get('predictions', [])
+          predictions = data.get('predictions', [])
+          past_games = data.get('past_games', 0)
+          future_games = data.get('future_games', 0)
+          window = data.get('window', '')
 
-          if not preds:
-              lines.append('今日无比赛或数据获取失败')
+          if not predictions:
+              if past_games == 0 and future_games == 0:
+                  lines.append(f'📅 预测窗口: {window}')
+                  lines.append('今日无比赛（休赛期或窗口内无赛程）')
+              else:
+                  lines.append(f'📅 预测窗口: {window}')
+                  lines.append(f'已结束: {past_games} 场 | 待预测: {future_games} 场')
+                  lines.append('暂无符合条件比赛')
           else:
-              lines.append(f'待预测：{len(preds)} 场')
-              lines.append('')
-              for p in preds:
-                  lines.append(f'[预测] {p["match"]}')
-                  lines.append(f'  方向：{p["direction"]} {p["stars"]}')
-                  lines.append(f'  比分：{p["predicted_score"]}（分差 {p["predicted_margin"]:+.1f}）')
-                  if p.get("spread_prediction"):
-                      lines.append(f'  让分：{p["spread_prediction"]}')
-                  if p.get("total_prediction"):
-                      lines.append(f'  大小分：{p["total_prediction"]}')
-                  if p.get("odds_calibration"):
-                      lines.append(f'  {p["odds_calibration"]}')
-                  lines.append('')
+              lines.append(f'📅 预测窗口: {window}')
+              lines.append(f'今日无比赛或数据获取失败')
 
           email_body = '\n'.join(lines)
           print(email_body)
