@@ -49,7 +49,8 @@ def to_cn(name: str) -> str:
 def load_elo() -> dict[str, float]:
     if ELO_FILE.exists():
         return json.loads(ELO_FILE.read_text())
-    return {}
+    # 首次运行：使用默认初始值
+    return {team: ELO["INITIAL"] for team in TEAM_CN.keys()}
 
 def save_elo(ratings: dict[str, float]) -> None:
     ELO_FILE.write_text(json.dumps(ratings, indent=2))
@@ -79,7 +80,7 @@ def update_elo(ratings: dict, home: str, away: str, home_win: bool) -> None:
 
 # ── 数据获取 ──
 def fetch_odds_games(league: str = "nba") -> list[dict]:
-    """从 The Odds API 获取比赛 + 盘口"""
+    """从 The Odds API 获取比赛 + 盘口，去重后返回"""
     if not ODDS_API_KEY:
         logger.error("ODDS_API_KEY not set")
         return []
@@ -105,7 +106,20 @@ def fetch_odds_games(league: str = "nba") -> list[dict]:
         except ValueError:
             pass
 
-    return games
+    # 去重：按 (sorted teams) 组合，保留第一个
+    seen_pairs = set()
+    unique_games = []
+    for g in games:
+        h, a = g.get("home_team", ""), g.get("away_team", "")
+        pair_key = tuple(sorted([h, a]))
+        if pair_key not in seen_pairs:
+            seen_pairs.add(pair_key)
+            unique_games.append(g)
+
+    if len(unique_games) < len(games):
+        logger.info("API 返回 %d 条，去重后 %d 场", len(games), len(unique_games))
+
+    return unique_games
 
 def fetch_completed_games(league: str = "nba") -> list[dict]:
     """从 The Odds API 获取已完赛结果，用于更新 ELO"""
@@ -144,14 +158,38 @@ def predict_game(home: str, away: str, ratings: dict,
     """单场预测"""
     rh = ratings.get(home, ELO["INITIAL"]) + ELO["HOME_ADV"]
     ra = ratings.get(away, ELO["INITIAL"])
-    win_prob = expected_score(rh, ra)
+    elo_win_prob = expected_score(rh, ra)
 
-    # 预测分差
-    margin = (rh - ra) * PREDICT["ELO_TO_POINTS"] + PREDICT["HOME_SCORE_ADV"]  # 每 10 ELO 分 ≈ 0.6 分
-    pred_home_score = PREDICT["AVG_PPG"] + margin / 2
-    pred_away_score = PREDICT["AVG_PPG"] - margin / 2
+    # 赔率反推胜率（凯利解码）
+    prob_home_from_odds = None
+    if odds_home and odds_away and odds_home > 0 and odds_away > 0:
+        # 隐含概率 = 1/赔率，然后归一化
+        imp_h = 1 / odds_home
+        imp_a = 1 / odds_away
+        total_imp = imp_h + imp_a
+        if total_imp > 0:
+            prob_home_from_odds = imp_h / total_imp
+
+    # 融合 ELO 和赔率胜率（加权平均）
+    if prob_home_from_odds is not None:
+        # ELO 权重 0.3，赔率权重 0.7（赔率更准确）
+        win_prob = 0.3 * elo_win_prob + 0.7 * prob_home_from_odds
+    else:
+        win_prob = elo_win_prob
+
+    # 预测分差 - 用赔率胜率推算
+    # 赢率 0.5 → 分差 0，赢率 0.7 → 分差约 8，赢率 0.8 → 分差约 14
+    # 公式：margin = logit(win_prob) * 14
+    if prob_home_from_odds and 0 < prob_home_from_odds < 1:
+        import math
+        logit = math.log(prob_home_from_odds / (1 - prob_home_from_odds))
+        pred_margin = max(-20, min(20, logit * 14))  # 限制在合理范围
+    else:
+        pred_margin = (rh - ra) * PREDICT["ELO_TO_POINTS"] + PREDICT["HOME_SCORE_ADV"]
+
+    pred_home_score = PREDICT["AVG_PPG"] + pred_margin / 2
+    pred_away_score = PREDICT["AVG_PPG"] - pred_margin / 2
     pred_total = pred_home_score + pred_away_score
-    pred_margin = pred_home_score - pred_away_score
 
     # 方向判断
     winner = to_cn(home) if win_prob > 0.5 else to_cn(away)
