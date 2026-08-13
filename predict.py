@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""NBA 预测（ELO + 效率模型）"""
+"""NBA 预测（ELO + 赔率模型）— 24小时窗口，参考 football-predict 流程"""
 
-import json, os, sys, time, urllib.request, urllib.error, logging
+import json, os, sys, time, urllib.request, urllib.error, logging, math
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from config import LEAGUES, ELO, PREDICT, TEAM_CN, TEAM_CN_ALIASES
 
-# 日志配置
+# ── 日志 ──
 logger = logging.getLogger("nba_predict")
 
-# ODDS_API_KEY — 环境变量优先，配置文件兜底
+# ── ODDS_API_KEY ──
 ODDS_API_KEY = os.environ.get("ODDS_API_KEY") or ""
 if not ODDS_API_KEY:
     try:
@@ -26,6 +26,7 @@ DATA_DIR.mkdir(exist_ok=True)
 
 NOW = datetime.now(timezone.utc)
 BJT = NOW.astimezone(timezone(timedelta(hours=8)))
+WINDOW_END = BJT + timedelta(hours=24)  # 24小时预测窗口
 
 # ── 工具 ──
 def _get(url: str, headers: dict | None = None, timeout: int = 10) -> tuple[list | dict | None, dict]:
@@ -37,7 +38,6 @@ def _get(url: str, headers: dict | None = None, timeout: int = 10) -> tuple[list
             resp_headers = dict(r.headers)
             return data, resp_headers
     except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError, TimeoutError) as e:
-        # 过滤 URL 中的 API Key，防止凭证泄露到日志
         safe_url = url.split("?")[0] + "?***"
         logger.error("request failed (%s): %s", safe_url, e)
         return None, {}
@@ -49,21 +49,10 @@ def to_cn(name: str) -> str:
 def load_elo() -> dict[str, float]:
     if ELO_FILE.exists():
         return json.loads(ELO_FILE.read_text())
-    # 首次运行：使用默认初始值
     return {team: ELO["INITIAL"] for team in TEAM_CN.keys()}
 
 def save_elo(ratings: dict[str, float]) -> None:
     ELO_FILE.write_text(json.dumps(ratings, indent=2))
-
-def apply_regression(ratings: dict[str, float]) -> int:
-    """休赛期 ELO 回归：将评分向初始值靠拢，返回受影响球队数"""
-    reg = ELO["REGRESSION"]
-    init = ELO["INITIAL"]
-    count = 0
-    for team in ratings:
-        ratings[team] = init + reg * (ratings[team] - init)
-        count += 1
-    return count
 
 def expected_score(rating_a: float, rating_b: float) -> float:
     return 1 / (1 + 10 ** ((rating_b - rating_a) / ELO["SCALE"]))
@@ -77,6 +66,22 @@ def update_elo(ratings: dict, home: str, away: str, home_win: bool) -> None:
     sh = 1.0 if home_win else 0.0
     ratings[home] = ratings.get(home, ELO["INITIAL"]) + K * (sh - eh)
     ratings[away] = ratings.get(away, ELO["INITIAL"]) + K * ((1 - sh) - (1 - eh))
+
+def update_elo_from_results(ratings: dict[str, float], completed_games: list[dict]) -> int:
+    """从已完赛比赛更新 ELO 评分"""
+    updated = 0
+    for g in completed_games:
+        home = g.get("home_team", "")
+        away = g.get("away_team", "")
+        scores = g.get("scores", {})
+        if not isinstance(scores, dict):
+            continue
+        hs = scores.get(home, 0)
+        as_ = scores.get(away, 0)
+        if home and away and hs and as_:
+            update_elo(ratings, home, away, hs > as_)
+            updated += 1
+    return updated
 
 # ── 数据获取 ──
 def fetch_odds_games(league: str = "nba") -> list[dict]:
@@ -106,7 +111,7 @@ def fetch_odds_games(league: str = "nba") -> list[dict]:
         except ValueError:
             pass
 
-    # 去重：按 (sorted teams) 组合，保留第一个
+    # 去重：按队伍组合
     seen_pairs = set()
     unique_games = []
     for g in games:
@@ -122,34 +127,64 @@ def fetch_odds_games(league: str = "nba") -> list[dict]:
     return unique_games
 
 def fetch_completed_games(league: str = "nba") -> list[dict]:
-    """从 The Odds API 获取已完赛结果，用于更新 ELO"""
+    """从 The Odds API 获取已完赛结果"""
     if not ODDS_API_KEY:
         return []
 
     sport = LEAGUES.get(league, {}).get("odds_sport", "basketball_nba")
-    url = (
-        f"https://api.the-odds-api.com/v4/sports/{sport}/scores/"
-        f"?apiKey={ODDS_API_KEY}"
-    )
+    url = f"https://api.the-odds-api.com/v4/sports/{sport}/scores/?apiKey={ODDS_API_KEY}"
     data, _ = _get(url)
     if not isinstance(data, list):
         return []
     return [g for g in data if g.get("completed") and g.get("scores")]
 
-def update_elo_from_results(ratings: dict[str, float]) -> int:
-    """从已完赛比赛更新 ELO 评分，返回更新场次数"""
-    games = fetch_completed_games()
-    updated = 0
+def filter_24h_games(games: list[dict]) -> tuple[list[dict], list[dict]]:
+    """按24小时窗口过滤比赛，返回 (past, future)"""
+    past = []
+    future = []
+
     for g in games:
-        home = g.get("home_team", "")
-        away = g.get("away_team", "")
-        scores = g.get("scores", {})
-        hs = scores.get(home, 0) if isinstance(scores, dict) else 0
-        as_ = scores.get(away, 0) if isinstance(scores, dict) else 0
-        if home and away and hs and as_:
-            update_elo(ratings, home, away, hs > as_)
-            updated += 1
-    return updated
+        comm_str = g.get("commence_time", "")
+        if not comm_str:
+            continue
+        try:
+            comm_dt = datetime.fromisoformat(comm_str.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+
+        # 已结束或24小时内结束
+        if comm_dt < NOW:
+            past.append(g)
+        elif comm_dt <= WINDOW_END:
+            future.append(g)
+        # 超过24小时的跳过
+
+    logger.info(f"24h窗口: 已结束 {len(past)} 场，待预测 {len(future)} 场")
+    return past, future
+
+# ── 盘口解析 ──
+def parse_odds(game: dict, home: str) -> tuple[float | None, float | None, float | None, float | None]:
+    """解析赔率、让分线、大小分线"""
+    bookmakers = game.get("bookmakers", [])
+    odds_home = odds_away = spread_line = total_line = None
+
+    for bm in bookmakers:
+        for m in bm.get("markets", []):
+            outcomes = m.get("outcomes", [])
+            key = m.get("key", "")
+            if key == "h2h" and len(outcomes) >= 2:
+                if outcomes[0].get("name") == home:
+                    odds_home, odds_away = outcomes[0].get("price"), outcomes[1].get("price")
+                else:
+                    odds_home, odds_away = outcomes[1].get("price"), outcomes[0].get("price")
+            elif key == "spreads" and len(outcomes) >= 2:
+                for o in outcomes:
+                    if o.get("name") == home:
+                        spread_line = o.get("point")
+            elif key == "totals" and len(outcomes) >= 2:
+                total_line = outcomes[0].get("point", 0)
+
+    return odds_home, odds_away, spread_line, total_line
 
 # ── 预测 ──
 def predict_game(home: str, away: str, ratings: dict,
@@ -160,30 +195,25 @@ def predict_game(home: str, away: str, ratings: dict,
     ra = ratings.get(away, ELO["INITIAL"])
     elo_win_prob = expected_score(rh, ra)
 
-    # 赔率反推胜率（凯利解码）
+    # 赔率反推胜率
     prob_home_from_odds = None
     if odds_home and odds_away and odds_home > 0 and odds_away > 0:
-        # 隐含概率 = 1/赔率，然后归一化
         imp_h = 1 / odds_home
         imp_a = 1 / odds_away
         total_imp = imp_h + imp_a
         if total_imp > 0:
             prob_home_from_odds = imp_h / total_imp
 
-    # 融合 ELO 和赔率胜率（加权平均）
+    # 融合 ELO 和赔率胜率
     if prob_home_from_odds is not None:
-        # ELO 权重 0.3，赔率权重 0.7（赔率更准确）
         win_prob = 0.3 * elo_win_prob + 0.7 * prob_home_from_odds
     else:
         win_prob = elo_win_prob
 
     # 预测分差 - 用赔率胜率推算
-    # 赢率 0.5 → 分差 0，赢率 0.7 → 分差约 8，赢率 0.8 → 分差约 14
-    # 公式：margin = logit(win_prob) * 14
     if prob_home_from_odds and 0 < prob_home_from_odds < 1:
-        import math
         logit = math.log(prob_home_from_odds / (1 - prob_home_from_odds))
-        pred_margin = max(-20, min(20, logit * 14))  # 限制在合理范围
+        pred_margin = max(-20, min(20, logit * 14))
     else:
         pred_margin = (rh - ra) * PREDICT["ELO_TO_POINTS"] + PREDICT["HOME_SCORE_ADV"]
 
@@ -236,95 +266,73 @@ def predict_game(home: str, away: str, ratings: dict,
         "odds_calibration": odds_cal,
     }
 
-# ── 盘口解析 ──
-def parse_odds(game: dict, home: str) -> tuple[float | None, float | None, float | None, float | None]:
-    """从单场比赛数据中解析赔率、让分线、大小分线"""
-    bookmakers = game.get("bookmakers", [])
-    odds_home = odds_away = spread_line = total_line = None
-
-    for bm in bookmakers:
-        for m in bm.get("markets", []):
-            outcomes = m.get("outcomes", [])
-            key = m.get("key", "")
-            if key == "h2h" and len(outcomes) >= 2:
-                if outcomes[0].get("name") == home:
-                    odds_home, odds_away = outcomes[0].get("price"), outcomes[1].get("price")
-                else:
-                    odds_home, odds_away = outcomes[1].get("price"), outcomes[0].get("price")
-            elif key == "spreads" and len(outcomes) >= 2:
-                for o in outcomes:
-                    if o.get("name") == home:
-                        spread_line = o.get("point")
-            elif key == "totals" and len(outcomes) >= 2:
-                total_line = outcomes[0].get("point", 0)
-
-    return odds_home, odds_away, spread_line, total_line
-
 # ── 主流程 ──
 def run() -> dict:
-    logger.info("=== NBA 预测 ===")
+    logger.info("=== NBA 预测 (24h窗口) ===")
+    logger.info("当前时间: %s BJT", BJT.strftime("%Y-%m-%d %H:%M"))
+    logger.info("预测窗口: %s ~ %s", BJT.strftime("%Y-%m-%d %H:%M"),
+                WINDOW_END.strftime("%Y-%m-%d %H:%M"))
 
     # 1. 加载 ELO
     ratings = load_elo()
     logger.info("ELO 球队数: %d", len(ratings))
 
-    # 1.1 休赛期回归（9月触发，新赛季10月开始）
-    if BJT.month == 9 and ratings:
-        count = apply_regression(ratings)
-        logger.info("ELO 休赛期回归: %d 支球队", count)
-        save_elo(ratings)
-
-    # 1.5 从已完赛比赛更新 ELO
-    updated = update_elo_from_results(ratings)
-    if updated:
-        logger.info("ELO 更新: %d 场完赛", updated)
-        save_elo(ratings)
-
-    # 2. 获取比赛
-    games = fetch_odds_games()
-    if not games:
+    # 2. 获取比赛数据
+    all_games = fetch_odds_games()
+    if not all_games:
         logger.warning("无比赛数据，返回空")
-        output = {"league": "nba", "status": "no_data", "predictions": [], "generated_at": BJT.isoformat()}
-        return output
+        return {"league": "nba", "status": "no_data", "predictions": [],
+                "generated_at": BJT.isoformat(), "window": f"{BJT.strftime('%Y-%m-%d')}~{WINDOW_END.strftime('%Y-%m-%d %H:%M')}"}
 
-    logger.info("比赛数: %d", len(games))
+    logger.info("API 返回总比赛数: %d", len(all_games))
 
-    # 3. 预测
+    # 3. 24小时窗口过滤
+    past_games, future_games = filter_24h_games(all_games)
+
+    # 4. 回填已结束比赛结果，更新 ELO
+    # 从 completed API 获取更准确的比分
+    completed_api = fetch_completed_games()
+    if completed_api:
+        updated = update_elo_from_results(ratings, completed_api)
+        if updated:
+            logger.info("ELO 更新: %d 场完赛", updated)
+            save_elo(ratings)
+
+    # 5. 预测未来比赛
     predictions = []
-    for g in games:
+    for g in future_games:
         try:
             home = g.get("home_team", "?")
             away = g.get("away_team", "?")
             if home == "?" or away == "?":
-                logger.warning("比赛缺少队名，跳过: %s", g.get('id', 'unknown'))
                 continue
             odds_home, odds_away, spread_line, total_line = parse_odds(g, home)
             pred = predict_game(home, away, ratings, odds_home, odds_away, spread_line, total_line)
+            pred["commence_time"] = g.get("commence_time", "")
             predictions.append(pred)
         except Exception as e:
             logger.warning("解析比赛异常，跳过: %s", e)
             continue
 
-    # 4. 保存 ELO
+    # 6. 保存 ELO
     save_elo(ratings)
 
     output = {
         "league": "nba",
         "generated_at": BJT.isoformat(),
         "status": "ok",
+        "window": f"{BJT.strftime('%Y-%m-%d %H:%M')}~{WINDOW_END.strftime('%Y-%m-%d %H:%M')}",
+        "total_in_window": len(past_games) + len(future_games),
+        "past_games": len(past_games),
+        "future_games": len(future_games),
         "predictions": predictions,
-        "total": len(predictions),
+        "predictions_count": len(predictions),
     }
     return output
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(message)s",
-        stream=sys.stderr,
-    )
+    logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stderr)
     result = run()
-    # 确保始终输出 JSON 到 stdout
     if not isinstance(result.get("predictions"), list):
         result["predictions"] = []
     print(json.dumps(result, ensure_ascii=False, indent=2))
