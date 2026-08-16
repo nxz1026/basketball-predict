@@ -9,6 +9,17 @@ from config import LEAGUES, ELO, PREDICT, TEAM_CN, TEAM_CN_ALIASES
 # ── 日志 ──
 logger = logging.getLogger("nba_predict")
 
+# ── AI 反馈循环 ──
+try:
+    from ai.feedback_loop import load_ai_adjustments, adjust_prediction
+    _AI_ADJUSTMENTS = load_ai_adjustments()
+    if _AI_ADJUSTMENTS:
+        logger.info("AI 调整: 已加载 %d 条历史评分", len(_AI_ADJUSTMENTS))
+    else:
+        _AI_ADJUSTMENTS = {}
+except Exception:
+    _AI_ADJUSTMENTS = {}
+
 # ── ODDS_API_KEY ──
 ODDS_API_KEY = os.environ.get("ODDS_API_KEY") or ""
 if not ODDS_API_KEY:
@@ -317,14 +328,46 @@ def run() -> dict:
     # 6. 保存 ELO
     save_elo(ratings)
 
+    # 6.5 AI 调整
+    if _AI_ADJUSTMENTS and predictions:
+        adjusted = 0
+        for i, p in enumerate(predictions):
+            before = p.get("win_prob", 0.5)
+            p = adjust_prediction(p, _AI_ADJUSTMENTS)
+            if p.get("ai_adjusted"):
+                adjusted += 1
+            predictions[i] = p
+        if adjusted:
+            logger.info("AI 调整: %d/%d 场已调整置信度", adjusted, len(predictions))
+
+    # 7. 构建输出
+    past_details = []
+    for g in past_games:
+        home = g.get("home_team", "?")
+        away = g.get("away_team", "?")
+        scores = g.get("scores", {})
+        if isinstance(scores, dict):
+            hs = scores.get(home, "?")
+            as_ = scores.get(away, "?")
+        else:
+            hs = as_ = "?"
+        score_str = f"{hs}-{as_}" if hs != "?" and as_ != "?" else ""
+        past_details.append({
+            "name": f"{to_cn(home)} vs {to_cn(away)}",
+            "home": to_cn(home),
+            "away": to_cn(away),
+            "score": score_str,
+        })
+
     output = {
         "league": "nba",
         "generated_at": BJT.isoformat(),
         "status": "ok",
         "window": f"{BJT.strftime('%Y-%m-%d %H:%M')}~{WINDOW_END.strftime('%Y-%m-%d %H:%M')}",
         "total_in_window": len(past_games) + len(future_games),
-        "past_games": len(past_games),
-        "future_games": len(future_games),
+        "past_games_count": len(past_games),
+        "future_games_count": len(future_games),
+        "past_games_detail": past_details,
         "predictions": predictions,
         "predictions_count": len(predictions),
     }

@@ -19,6 +19,10 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt 2>&1 | tail -3
+
       - name: Run prediction
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
@@ -38,21 +42,49 @@ jobs:
 
           status = data.get('status', '?')
           predictions = data.get('predictions', [])
-          past_games = data.get('past_games', 0)
-          future_games = data.get('future_games', 0)
+          past_games_count = data.get('past_games_count', 0)
+          future_games_count = data.get('future_games_count', 0)
+          past_details = data.get('past_games_detail', [])
           window = data.get('window', '')
 
-          if not predictions:
-              if past_games == 0 and future_games == 0:
-                  lines.append(f'📅 预测窗口: {window}')
+          # 回填结果
+          if past_details:
+              lines.append(f'回填：{len(past_details)} 场')
+              for m in past_details:
+                  display = m.get('name', f"{m.get('home','?')} vs {m.get('away','?')}")
+                  sc = m.get('score', '?')
+                  if sc:
+                      lines.append(f'  {display} -> {sc}')
+                  else:
+                      lines.append(f'  {display} -> 未出比分')
+              lines.append('')
+
+          # 预测
+          if predictions:
+              lines.append(f'预测：{len(predictions)} 场')
+              for p in predictions:
+                  ai_tag = ' 🤖' if p.get('ai_adjusted') else ''
+                  lines.append(f'[预测] {p["match"]}{ai_tag}')
+                  lines.append(f'  方向：{p.get("direction","?")} {p.get("stars","?")}')
+                  od = p.get('odds_calibration', '')
+                  if od:
+                      lines.append(f'  {od}')
+                  sp = p.get('spread_prediction')
+                  tp = p.get('total_prediction')
+                  if sp or tp:
+                      extra = []
+                      if sp:
+                          extra.append(f'让分={sp}')
+                      if tp:
+                          extra.append(f'大小分={tp}')
+                      lines.append(f'  {" | ".join(extra)}')
+              lines.append('')
+          else:
+              if past_games_count == 0 and future_games_count == 0:
                   lines.append('今日无比赛（休赛期或窗口内无赛程）')
               else:
-                  lines.append(f'📅 预测窗口: {window}')
-                  lines.append(f'已结束: {past_games} 场 | 待预测: {future_games} 场')
+                  lines.append(f'已结束: {past_games_count} 场 | 待预测: {future_games_count} 场')
                   lines.append('暂无符合条件比赛')
-          else:
-              lines.append(f'📅 预测窗口: {window}')
-              lines.append(f'今日无比赛或数据获取失败')
 
           email_body = '\n'.join(lines)
           print(email_body)
@@ -64,6 +96,45 @@ jobs:
           with open(github_output, 'a') as f:
               day = bjt.split(' ')[0]
               f.write(f'subject={day}\n')
+          PYEOF
+
+      - name: AI Enrichment
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+        shell: bash
+        run: python3 scripts/ai_enrich_gha.py || echo "[AI Enrich] skipped (no key or error)"
+
+      - name: AI Feedback Reconciliation
+        shell: bash
+        run: |
+          python3 << 'PYEOF'
+          import json, os, sys
+          from pathlib import Path
+          sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+          try:
+              from ai.feedback_loop import reconcile_results, print_metrics_summary
+
+              output_path = '/tmp/output.json'
+              if not os.path.exists(output_path):
+                  print("[Reconcile] No output data, skipping")
+                  exit(0)
+
+              data = json.load(open(output_path))
+              predictions = data.get('predictions', [])
+              past_details = data.get('past_games_detail', [])
+
+              if not predictions or not past_details:
+                  print("[Reconcile] No predictions or past results to reconcile")
+                  exit(0)
+
+              metrics = reconcile_results(predictions, past_details)
+              print(print_metrics_summary(metrics))
+          except Exception as e:
+              import traceback
+              print(f"[Reconcile] ❌ 错误: {e}")
+              print(traceback.format_exc())
           PYEOF
 
       - name: Send webhook
