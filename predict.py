@@ -65,6 +65,14 @@ def load_elo() -> dict[str, float]:
 def save_elo(ratings: dict[str, float]) -> None:
     ELO_FILE.write_text(json.dumps(ratings, indent=2))
 
+def apply_regression(ratings: dict[str, float]) -> int:
+    """休赛期 ELO 回归：各队评分向初始分靠拢"""
+    init = ELO["INITIAL"]
+    reg = ELO["REGRESSION"]
+    for team in list(ratings.keys()):
+        ratings[team] = init + reg * (ratings[team] - init)
+    return len(ratings)
+
 def expected_score(rating_a: float, rating_b: float) -> float:
     return 1 / (1 + 10 ** ((rating_b - rating_a) / ELO["SCALE"]))
 

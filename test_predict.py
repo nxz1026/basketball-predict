@@ -265,11 +265,11 @@ class TestELOPersistence:
         predict.ELO_FILE = original
 
     def test_load_nonexistent(self, tmp_path):
-        """文件不存在时返回空 dict"""
+        """文件不存在时返回所有球队初始分字典"""
         import predict
         original = predict.ELO_FILE
         predict.ELO_FILE = tmp_path / "nonexistent.json"
-        assert load_elo() == {}
+        assert load_elo() == {t: ELO["INITIAL"] for t in TEAM_CN}
         predict.ELO_FILE = original
 
 

@@ -9,6 +9,8 @@ jobs:
   predict:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
@@ -101,6 +103,7 @@ jobs:
       - name: AI Enrichment
         env:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_API_BASE: ${{ secrets.LLM_API_BASE }}
           LLM_MODEL: ${{ secrets.LLM_MODEL }}
         shell: bash
         run: python3 scripts/ai_enrich_gha.py || echo "[AI Enrich] skipped (no key or error)"
@@ -131,11 +134,45 @@ jobs:
 
               metrics = reconcile_results(predictions, past_details)
               print(print_metrics_summary(metrics))
-          except Exception as e:
+
+              # 把命中率小结追加到每日推送正文
+              try:
+                  from ai.feedback_loop import format_email_summary
+                  summary = format_email_summary(metrics)
+                  email_body_path = '/tmp/email_body.txt'
+                  if os.path.exists(email_body_path):
+                      with open(email_body_path) as f:
+                          body = f.read()
+                      with open(email_body_path, 'w') as f:
+                          f.write(body + summary + "\n")
+                      print("[Reconcile] Appended 命中率小结 to email body")
+                  else:
+                      print("[Reconcile] email body not found, skip append")
+              except Exception as e:
+                  print(f"[Reconcile] Could not append summary: {e}")
+           except Exception as e:
               import traceback
               print(f"[Reconcile] ❌ 错误: {e}")
               print(traceback.format_exc())
           PYEOF
+
+      - name: Persist data (elo, ai scores, metrics)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          for f in data/elo.json data/ai_scores.json data/metrics_history.json; do
+            if [ -f "$f" ]; then git add -f "$f"; fi
+          done
+          if git diff --cached --quiet; then
+            echo "No data changes to persist"
+            exit 0
+          fi
+          git pull --rebase origin "${GITHUB_REF_NAME}" || true
+          git commit -m "chore: persist nba elo + ai scores + metrics [skip ci]"
+          git push origin "${GITHUB_REF_NAME}"
 
       - name: Send webhook
         shell: bash

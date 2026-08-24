@@ -49,7 +49,7 @@ def save_ai_scores(enriched_items: list[dict]) -> None:
         }
 
     AI_SCORES_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with open(AI_SCORES_FILE, "w") as f:
+    with open(AI_SCORES_FILE, "w", encoding="utf-8") as f:
         json.dump(existing, f, indent=2, ensure_ascii=False)
     print(f"[AI Feedback] Saved {len(existing)} AI scores to {AI_SCORES_FILE}")
 
@@ -99,11 +99,20 @@ def adjust_prediction(prediction: dict, ai_adjustments: dict[str, dict]) -> dict
 
 
 def reconcile_results(predictions: list[dict], actual_results: list[dict]) -> dict:
-    """Compare predictions against actual match results."""
+    """Compare predictions against actual match results.
+
+    `actual_results` entries (past_games_detail) use keys: name, home, away, score.
+    Predictions use keys: match, home, away, direction, win_prob, ai_adjusted.
+    """
+    from config import TEAM_CN, TEAM_CN_ALIASES
+
+    def to_cn(name: str) -> str:
+        return TEAM_CN.get(name, TEAM_CN_ALIASES.get(name, name))
+
     actual_by_name = {}
     for m in actual_results:
-        name = m.get("match", "")
-        score = m.get("predicted_score", "")
+        name = m.get("match") or m.get("name", "")
+        score = m.get("score") or m.get("predicted_score", "")
         if name and score:
             actual_by_name[name] = m
 
@@ -121,38 +130,38 @@ def reconcile_results(predictions: list[dict], actual_results: list[dict]) -> di
 
         total += 1
         predicted_dir = p.get("direction", "")
-        predicted_score = p.get("predicted_score", "0-0")
+        predicted_winner = predicted_dir.replace("胜", "").strip() if "胜" in predicted_dir else ""
 
+        score = actual.get("score") or actual.get("predicted_score", "")
         try:
-            home_goals = int(predicted_score.split("-")[0])
-            away_goals = int(predicted_score.split("-")[1])
-        except (ValueError, IndexError):
+            hs, as_ = str(score).split("-")
+            home_goals = int(hs)
+            away_goals = int(as_)
+        except (ValueError, AttributeError, TypeError):
             continue
 
+        home_cn = to_cn(p.get("home", ""))
+        away_cn = to_cn(p.get("away", ""))
         if home_goals > away_goals:
-            actual_dir = f"{p.get('home', '')} 胜"
-        elif home_goals < away_goals:
-            actual_dir = f"{p.get('away', '')} 胜"
+            actual_winner = home_cn
+        elif away_goals > home_goals:
+            actual_winner = away_cn
         else:
-            actual_dir = "平局"
+            actual_winner = ""
 
-        is_correct = predicted_dir == actual_dir or (
-            "胜" in predicted_dir and "胜" in actual_dir
-            and predicted_dir.split("胜")[0].strip() == actual_dir.split("胜")[0].strip()
-        )
+        is_correct = bool(predicted_winner) and predicted_winner == actual_winner
 
         if is_correct:
             correct += 1
             if p.get("ai_adjusted"):
                 ai_correct += 1
-
         if p.get("ai_adjusted"):
             ai_total += 1
 
         details.append({
             "match": match_name,
             "predicted": predicted_dir,
-            "actual": actual_dir,
+            "actual": (actual_winner + " 胜") if actual_winner else "未知",
             "correct": is_correct,
             "ai_adjusted": p.get("ai_adjusted", False),
             "ai_score": p.get("ai_score_used"),
@@ -185,10 +194,63 @@ def reconcile_results(predictions: list[dict], actual_results: list[dict]) -> di
     if len(history) > 100:
         history = history[-100:]
 
-    with open(METRICS_FILE, "w") as f:
+    with open(METRICS_FILE, "w", encoding="utf-8") as f:
         json.dump(history, f, indent=2, ensure_ascii=False)
 
     return metrics
+
+
+def compute_rolling_accuracy(history: list[dict], window: int = 30) -> dict:
+    """Aggregate accuracy across the most recent `window` reconciliation runs."""
+    recent = history[-window:] if window else history
+    total = sum(m.get("total_matches", 0) for m in recent)
+    correct = sum(m.get("correct", 0) for m in recent)
+    ai_total = sum(m.get("ai_adjusted_total", 0) for m in recent)
+    ai_correct = sum(m.get("ai_adjusted_correct", 0) for m in recent)
+    return {
+        "window": window,
+        "total": total,
+        "correct": correct,
+        "accuracy": round(correct / total, 3) if total else 0,
+        "ai_total": ai_total,
+        "ai_correct": ai_correct,
+        "ai_accuracy": round(ai_correct / ai_total, 3) if ai_total else None,
+    }
+
+
+def format_email_summary(metrics: dict) -> str:
+    """Build a Markdown-ish 命中率小结 block for the daily push."""
+    lines = ["", "=== 命中率小结 ===", ""]
+    if metrics.get("total_matches"):
+        lines.append(
+            f"本日命中率: {metrics['accuracy']:.1%} ({metrics['correct']}/{metrics['total_matches']})"
+        )
+        if metrics.get("ai_adjusted_total"):
+            lines.append(
+                f"AI 调整命中率: {metrics['ai_adjusted_accuracy']:.1%} "
+                f"({metrics['ai_adjusted_correct']}/{metrics['ai_adjusted_total']})"
+            )
+    else:
+        lines.append("本日无回填比赛可供核对")
+
+    # Rolling accuracy from saved history (includes today's run)
+    try:
+        history = json.loads(METRICS_FILE.read_text(encoding="utf-8")) if METRICS_FILE.exists() else []
+    except (json.JSONDecodeError, OSError):
+        history = []
+    if history:
+        roll = compute_rolling_accuracy(history, window=30)
+        if roll["total"]:
+            lines.append(
+                f"近30次累计命中率: {roll['accuracy']:.1%} ({roll['correct']}/{roll['total']})"
+            )
+            if roll["ai_total"]:
+                lines.append(
+                    f"近30次AI调整命中率: {roll['ai_accuracy']:.1%} "
+                    f"({roll['ai_correct']}/{roll['ai_total']})"
+                )
+
+    return "\n".join(lines)
 
 
 def print_metrics_summary(metrics: dict) -> str:

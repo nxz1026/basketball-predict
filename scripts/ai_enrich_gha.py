@@ -59,7 +59,7 @@ def enrich_via_llm(predictions: list) -> tuple[str, list]:
         preference_prompt="",
         config={
             "ai": {
-                "model": os.environ.get("LLM_MODEL", "deepseek-v4-flash"),
+                "model": os.environ.get("LLM_MODEL", "agnes-2.5-flash"),
                 "batch_size": 5,
                 "rate_limit_seconds": 3,
                 "min_score": 0,

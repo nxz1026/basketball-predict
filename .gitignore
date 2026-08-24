@@ -1,0 +1,5 @@
+﻿__pycache__/
+*.pyc
+data/ai_scores.json
+data/metrics_history.json
+
