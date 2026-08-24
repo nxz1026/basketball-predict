@@ -109,52 +109,7 @@ jobs:
         run: python3 scripts/ai_enrich_gha.py || echo "[AI Enrich] skipped (no key or error)"
 
       - name: AI Feedback Reconciliation
-        shell: bash
-        run: |
-          python3 << 'PYEOF'
-          import json, os, sys
-          from pathlib import Path
-          sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-          try:
-              from ai.feedback_loop import reconcile_results, print_metrics_summary
-
-              output_path = '/tmp/output.json'
-              if not os.path.exists(output_path):
-                  print("[Reconcile] No output data, skipping")
-                  exit(0)
-
-              data = json.load(open(output_path))
-              predictions = data.get('predictions', [])
-              past_details = data.get('past_games_detail', [])
-
-              if not predictions or not past_details:
-                  print("[Reconcile] No predictions or past results to reconcile")
-                  exit(0)
-
-              metrics = reconcile_results(predictions, past_details)
-              print(print_metrics_summary(metrics))
-
-              # 把命中率小结追加到每日推送正文
-              try:
-                  from ai.feedback_loop import format_email_summary
-                  summary = format_email_summary(metrics)
-                  email_body_path = '/tmp/email_body.txt'
-                  if os.path.exists(email_body_path):
-                      with open(email_body_path) as f:
-                          body = f.read()
-                      with open(email_body_path, 'w') as f:
-                          f.write(body + summary + "\n")
-                      print("[Reconcile] Appended 命中率小结 to email body")
-                  else:
-                      print("[Reconcile] email body not found, skip append")
-              except Exception as e:
-                  print(f"[Reconcile] Could not append summary: {e}")
-           except Exception as e:
-              import traceback
-              print(f"[Reconcile] ❌ 错误: {e}")
-              print(traceback.format_exc())
-          PYEOF
+        run: python3 scripts/reconcile_gha.py
 
       - name: Persist data (elo, ai scores, metrics)
         env:
