@@ -33,6 +33,7 @@ if not ODDS_API_KEY:
 BASE = Path(__file__).parent
 DATA_DIR = BASE / "data"
 ELO_FILE = DATA_DIR / "elo.json"
+PREDICTIONS_HISTORY = DATA_DIR / "predictions_history.json"
 DATA_DIR.mkdir(exist_ok=True)
 
 NOW = datetime.now(timezone.utc)
@@ -72,6 +73,43 @@ def apply_regression(ratings: dict[str, float]) -> int:
     for team in list(ratings.keys()):
         ratings[team] = init + reg * (ratings[team] - init)
     return len(ratings)
+
+def save_prediction_history(preds: list[dict]) -> int:
+    """持久化本场预测，供后续跨运行命中率核对。返回新增条数（按 match+commence_time 去重）。"""
+    PREDICTIONS_HISTORY.parent.mkdir(parents=True, exist_ok=True)
+    history = []
+    if PREDICTIONS_HISTORY.exists():
+        try:
+            history = json.loads(PREDICTIONS_HISTORY.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            history = []
+    seen = {(h.get("match"), h.get("commence_time")) for h in history}
+    added = 0
+    from datetime import datetime, timezone
+    ts = datetime.now(timezone.utc).isoformat()
+    for p in preds:
+        key = (p.get("match"), p.get("commence_time"))
+        if key in seen:
+            continue
+        rec = {
+            "match": p.get("match"),
+            "home": p.get("home"),
+            "away": p.get("away"),
+            "direction": p.get("direction"),
+            "win_prob": p.get("win_prob"),
+            "predicted_score": p.get("predicted_score"),
+            "commence_time": p.get("commence_time"),
+            "ai_adjusted": p.get("ai_adjusted", False),
+            "ai_score_used": p.get("ai_score_used"),
+            "saved_at": ts,
+        }
+        history.append(rec)
+        seen.add(key)
+        added += 1
+    if added:
+        with open(PREDICTIONS_HISTORY, "w", encoding="utf-8") as f:
+            json.dump(history, f, indent=2, ensure_ascii=False)
+    return added
 
 def expected_score(rating_a: float, rating_b: float) -> float:
     return 1 / (1 + 10 ** ((rating_b - rating_a) / ELO["SCALE"]))
@@ -347,6 +385,14 @@ def run() -> dict:
             predictions[i] = p
         if adjusted:
             logger.info("AI 调整: %d/%d 场已调整置信度", adjusted, len(predictions))
+
+    # 6.6 持久化预测，供跨运行命中率核对
+    try:
+        added = save_prediction_history(predictions)
+        if added:
+            logger.info("已保存 %d 条预测到历史库（跨运行核对用）", added)
+    except Exception as e:
+        logger.warning("保存预测历史失败: %s", e)
 
     # 7. 构建输出
     past_details = []

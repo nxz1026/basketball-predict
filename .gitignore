@@ -2,4 +2,6 @@
 *.pyc
 data/ai_scores.json
 data/metrics_history.json
+data/predictions_history.json
+
 

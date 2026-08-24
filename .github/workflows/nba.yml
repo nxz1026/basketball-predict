@@ -118,7 +118,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          for f in data/elo.json data/ai_scores.json data/metrics_history.json; do
+          for f in data/elo.json data/ai_scores.json data/metrics_history.json data/predictions_history.json; do
             if [ -f "$f" ]; then git add -f "$f"; fi
           done
           if git diff --cached --quiet; then
