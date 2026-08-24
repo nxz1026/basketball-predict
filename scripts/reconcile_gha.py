@@ -59,7 +59,7 @@ def main():
         print(f"[Reconcile] import error: {e}")
         return
 
-    with open(OUTPUT_PATH) as f:
+    with open(OUTPUT_PATH, encoding="utf-8") as f:
         data = json.load(f)
 
     past_details = data.get("past_games_detail", [])
@@ -89,9 +89,9 @@ def main():
     try:
         summary = format_email_summary(metrics)
         if os.path.exists(EMAIL_BODY_PATH):
-            with open(EMAIL_BODY_PATH) as f:
+            with open(EMAIL_BODY_PATH, encoding="utf-8") as f:
                 body = f.read()
-            with open(EMAIL_BODY_PATH, "w") as f:
+            with open(EMAIL_BODY_PATH, "w", encoding="utf-8") as f:
                 f.write(body + summary + "\n")
             print("[Reconcile] Appended 命中率小结 to email body")
         else:
