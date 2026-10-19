@@ -1,0 +1,14 @@
+[
+  {
+    "match": "底特律活塞 vs 波士顿凯尔特人",
+    "home": "底特律活塞",
+    "away": "波士顿凯尔特人",
+    "direction": "波士顿凯尔特人 胜",
+    "win_prob": 0.497,
+    "predicted_score": "112-112",
+    "commence_time": "2026-10-20T19:00:00Z",
+    "ai_adjusted": false,
+    "ai_score_used": null,
+    "saved_at": "2026-10-19T19:26:27.641580+00:00"
+  }
+]
