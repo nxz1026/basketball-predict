@@ -1,7 +1,17 @@
 {
   "底特律活塞 vs 波士顿凯尔特人": {
-    "ai_score": 32,
-    "ai_summary": "The prediction has negligible confidence at 0.497, essentially indicating no real edge over a coin flip. The low star rating further confirms this is a weak signal with no clear value.",
-    "ai_notes": "Confidence too low to consider; direction is unreliable."
+    "ai_score": 52,
+    "ai_summary": "Low confidence (0.387) undermines this underdog pick for Boston. The weak signal suggests high uncertainty despite favorable direction.",
+    "ai_notes": "Low confidence; underdog value questionable."
+  },
+  "纽约尼克斯 vs 费城76人": {
+    "ai_score": 68,
+    "ai_summary": "Highest confidence among the three (0.581) with a clear direction for New York. However, still only 'ok' strength due to moderate confidence ceiling.",
+    "ai_notes": "Best confidence; still moderate risk."
+  },
+  "圣安东尼奥马刺 vs 俄克拉荷马雷霆": {
+    "ai_score": 60,
+    "ai_summary": "Medium confidence (0.506) for San Antonio as underdog. Balanced but lacks strong conviction or standout edge.",
+    "ai_notes": "Average confidence; no strong edge."
   }
 }

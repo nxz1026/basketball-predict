@@ -10,5 +10,29 @@
     "ai_adjusted": false,
     "ai_score_used": null,
     "saved_at": "2026-10-19T19:26:27.641580+00:00"
+  },
+  {
+    "match": "纽约尼克斯 vs 费城76人",
+    "home": "纽约尼克斯",
+    "away": "费城76人",
+    "direction": "纽约尼克斯 胜",
+    "win_prob": 0.581,
+    "predicted_score": "115-109",
+    "commence_time": "2026-10-20T23:00:00Z",
+    "ai_adjusted": false,
+    "ai_score_used": null,
+    "saved_at": "2026-10-20T18:05:16.616533+00:00"
+  },
+  {
+    "match": "圣安东尼奥马刺 vs 俄克拉荷马雷霆",
+    "home": "圣安东尼奥马刺",
+    "away": "俄克拉荷马雷霆",
+    "direction": "圣安东尼奥马刺 胜",
+    "win_prob": 0.506,
+    "predicted_score": "112-112",
+    "commence_time": "2026-10-21T01:30:00Z",
+    "ai_adjusted": false,
+    "ai_score_used": null,
+    "saved_at": "2026-10-20T18:05:16.616533+00:00"
   }
 ]
