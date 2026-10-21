@@ -13,5 +13,55 @@
     "ai_score": 60,
     "ai_summary": "Medium confidence (0.506) for San Antonio as underdog. Balanced but lacks strong conviction or standout edge.",
     "ai_notes": "Average confidence; no strong edge."
+  },
+  "华盛顿奇才 vs 密尔沃基雄鹿": {
+    "ai_score": 58,
+    "ai_summary": "High-confidence pick on the underdog Houston Heat, aligning with both priority signals. However, the low confidence score (0.586) and 1-star rating indicate significant risk.",
+    "ai_notes": "Only high-confidence item; underdog value present but shaky."
+  },
+  "奥兰多魔术 vs 亚特兰大老鹰": {
+    "ai_score": 72,
+    "ai_summary": "Strongest statistical confidence (0.703) and highest star rating (2-star) among the group. Suggests a reliable favorite play rather than an underdog opportunity.",
+    "ai_notes": "Best quality signal, but lacks underdog preference."
+  },
+  "布鲁克林篮网 vs 夏洛特黄蜂": {
+    "ai_score": 48,
+    "ai_summary": "Low confidence (0.531) and 1-star rating suggest minimal predictive value. No clear edge or favorable signal structure.",
+    "ai_notes": "Weak overall; skip recommended."
+  },
+  "多伦多猛龙 vs 芝加哥公牛": {
+    "ai_score": 45,
+    "ai_summary": "Lowest confidence (0.486) and 1-star rating make this the weakest prediction in the set.",
+    "ai_notes": "Avoid; insufficient edge."
+  },
+  "迈阿密热火 vs 明尼苏达森林狼": {
+    "ai_score": 52,
+    "ai_summary": "Marginal confidence (0.516) with underdog lean, but lack of supporting strength limits reliability.",
+    "ai_notes": "Underdog appeal offsets weak data slightly."
+  },
+  "新奥尔良鹈鹕 vs 印第安纳步行者": {
+    "ai_score": 45,
+    "ai_summary": "Very low confidence prediction for Indiana to win. Despite being an underdog pick, the signal is too weak to be reliable.",
+    "ai_notes": "Confidence 0.441, 1-star"
+  },
+  "孟菲斯灰熊 vs 犹他爵士": {
+    "ai_score": 52,
+    "ai_summary": "Low confidence Memphis victory, but offers some underdog value. Direction is clear but strength is limited.",
+    "ai_notes": "Confidence 0.524, 1-star"
+  },
+  "休斯顿火箭 vs 达拉斯独行侠": {
+    "ai_score": 78,
+    "ai_summary": "Best confidence pick of the group with Houston favored to win. Solid 2-star rating supports the direction signal.",
+    "ai_notes": "Confidence 0.695, 2-star"
+  },
+  "洛杉矶湖人 vs 金州勇士": {
+    "ai_score": 65,
+    "ai_summary": "Moderate confidence in Lakers beating Golden State. Not an underdog play, but direction is reasonably clear.",
+    "ai_notes": "Confidence 0.619, 1-star"
+  },
+  "波特兰开拓者 vs 菲尼克斯太阳": {
+    "ai_score": 58,
+    "ai_summary": "Moderate confidence Portland win over Phoenix. Decent underdog angle but confidence is mid-range.",
+    "ai_notes": "Confidence 0.545, 1-star"
   }
 }
