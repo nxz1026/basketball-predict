@@ -63,5 +63,15 @@
     "ai_score": 58,
     "ai_summary": "Moderate confidence Portland win over Phoenix. Decent underdog angle but confidence is mid-range.",
     "ai_notes": "Confidence 0.545, 1-star"
+  },
+  "费城76人 vs 克利夫兰骑士": {
+    "ai_score": 42,
+    "ai_summary": "Low confidence at 0.545 and weak 1-star signal indicate high uncertainty. The underdog preference is not clearly supported given the marginal edge.",
+    "ai_notes": "Confidence below 0.6; 1-star rating suggests high risk."
+  },
+  "俄克拉荷马雷霆 vs 丹佛掘金": {
+    "ai_score": 68,
+    "ai_summary": "Moderate confidence at 0.67 with a 2-star signal provides a reasonable directional edge. While not an underdog pick, the clarity of direction improves value.",
+    "ai_notes": "Favorite pick limits underdog appeal; 2-star suggests moderate reliability."
   }
 }

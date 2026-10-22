@@ -166,5 +166,29 @@
     "ai_adjusted": false,
     "ai_score_used": null,
     "saved_at": "2026-10-21T18:13:10.872563+00:00"
+  },
+  {
+    "match": "费城76人 vs 克利夫兰骑士",
+    "home": "费城76人",
+    "away": "克利夫兰骑士",
+    "direction": "费城76人 胜",
+    "win_prob": 0.545,
+    "predicted_score": "114-110",
+    "commence_time": "2026-10-22T23:10:00Z",
+    "ai_adjusted": false,
+    "ai_score_used": null,
+    "saved_at": "2026-10-22T18:08:18.120923+00:00"
+  },
+  {
+    "match": "俄克拉荷马雷霆 vs 丹佛掘金",
+    "home": "俄克拉荷马雷霆",
+    "away": "丹佛掘金",
+    "direction": "俄克拉荷马雷霆 胜",
+    "win_prob": 0.67,
+    "predicted_score": "119-105",
+    "commence_time": "2026-10-23T01:40:00Z",
+    "ai_adjusted": false,
+    "ai_score_used": null,
+    "saved_at": "2026-10-22T18:08:18.120923+00:00"
   }
 ]
