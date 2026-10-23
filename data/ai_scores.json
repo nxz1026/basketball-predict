@@ -73,5 +73,55 @@
     "ai_score": 68,
     "ai_summary": "Moderate confidence at 0.67 with a 2-star signal provides a reasonable directional edge. While not an underdog pick, the clarity of direction improves value.",
     "ai_notes": "Favorite pick limits underdog appeal; 2-star suggests moderate reliability."
+  },
+  "密尔沃基雄鹿 vs 芝加哥公牛": {
+    "ai_score": 52,
+    "ai_summary": "Milwaukee Bucks are slight favorites with moderate confidence (0.524). This is a low-value pick due to weak confidence and favorite selection.",
+    "ai_notes": "Low confidence; no underdog value."
+  },
+  "夏洛特黄蜂 vs 亚特兰大老鹰": {
+    "ai_score": 46,
+    "ai_summary": "Atlanta Hawks to win against Charlotte Hornets with very low confidence (0.457). The sub-50% confidence suggests high risk.",
+    "ai_notes": "Under 50% confidence; avoid."
+  },
+  "波士顿凯尔特人 vs 纽约尼克斯": {
+    "ai_score": 54,
+    "ai_summary": "Boston Celtics favored over New York Knicks with slightly better confidence (0.538). Still a low-confidence favorite pick.",
+    "ai_notes": "Weak confidence; favorite selection."
+  },
+  "印第安纳步行者 vs 达拉斯独行侠": {
+    "ai_score": 64,
+    "ai_summary": "Indiana Pacers vs Dallas Mavericks features the highest confidence (0.644) among all picks. Pacers are underdogs here, offering better value.",
+    "ai_notes": "Best confidence; underdog pick aligns with priorities."
+  },
+  "奥兰多魔术 vs 明尼苏达森林狼": {
+    "ai_score": 51,
+    "ai_summary": "Orlando Magic favored over Minnesota Timberwolves with low confidence (0.509). No clear edge or underdog opportunity.",
+    "ai_notes": "Low confidence; favorite selection."
+  },
+  "华盛顿奇才 vs 多伦多猛龙": {
+    "ai_score": 38,
+    "ai_summary": "Low confidence (0.333) with the favorite selected, creating a poor value scenario. The 2-star designation seems inconsistent with the low probability.",
+    "ai_notes": "Strong underdog bias required; avoid."
+  },
+  "迈阿密热火 vs 底特律活塞": {
+    "ai_score": 48,
+    "ai_summary": "Moderate confidence in the favorite Detroit Pistons, but low value due to lack of underdog appeal. Minimal upside for bettors.",
+    "ai_notes": "Below 50% confidence threshold for reliability."
+  },
+  "圣安东尼奥马刺 vs 休斯顿火箭": {
+    "ai_score": 62,
+    "ai_summary": "Highest raw confidence (0.594) among the set, favoring San Antonio. However, picking the favorite limits value and contradicts underdog priority.",
+    "ai_notes": "Ok confidence, but weak directional value."
+  },
+  "犹他爵士 vs 新奥尔良鹈鹕": {
+    "ai_score": 45,
+    "ai_summary": "Low confidence (0.491) on the Oklahoma City Thunder as favorites. Neither strong conviction nor underdog value present.",
+    "ai_notes": "Weak pick across all priority metrics."
+  },
+  "金州勇士 vs 孟菲斯灰熊": {
+    "ai_score": 58,
+    "ai_summary": "Solid confidence (0.576) in the Golden State Warriors, but again selecting the favorite rather than an underdog reduces predicted value.",
+    "ai_notes": "Good confidence signal, poor underdog alignment."
   }
 }
