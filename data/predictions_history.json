@@ -334,5 +334,101 @@
     "ai_adjusted": false,
     "ai_score_used": null,
     "saved_at": "2026-10-23T17:56:43.006233+00:00"
+  },
+  {
+    "match": "夏洛特黄蜂 vs 迈阿密热火",
+    "home": "夏洛特黄蜂",
+    "away": "迈阿密热火",
+    "direction": "迈阿密热火 胜",
+    "win_prob": 0.457,
+    "predicted_score": "110-114",
+    "commence_time": "2026-10-24T22:10:00Z",
+    "ai_adjusted": false,
+    "ai_score_used": null,
+    "saved_at": "2026-10-24T16:52:41.483377+00:00"
+  },
+  {
+    "match": "克利夫兰骑士 vs 布鲁克林篮网",
+    "home": "克利夫兰骑士",
+    "away": "布鲁克林篮网",
+    "direction": "克利夫兰骑士 胜",
+    "win_prob": 0.714,
+    "predicted_score": "122-102",
+    "commence_time": "2026-10-24T23:40:00Z",
+    "ai_adjusted": false,
+    "ai_score_used": null,
+    "saved_at": "2026-10-24T16:52:41.483377+00:00"
+  },
+  {
+    "match": "费城76人 vs 密尔沃基雄鹿",
+    "home": "费城76人",
+    "away": "密尔沃基雄鹿",
+    "direction": "费城76人 胜",
+    "win_prob": 0.737,
+    "predicted_score": "122-102",
+    "commence_time": "2026-10-24T23:40:00Z",
+    "ai_adjusted": false,
+    "ai_score_used": null,
+    "saved_at": "2026-10-24T16:52:41.483377+00:00"
+  },
+  {
+    "match": "芝加哥公牛 vs 华盛顿奇才",
+    "home": "芝加哥公牛",
+    "away": "华盛顿奇才",
+    "direction": "芝加哥公牛 胜",
+    "win_prob": 0.517,
+    "predicted_score": "113-111",
+    "commence_time": "2026-10-25T00:10:00Z",
+    "ai_adjusted": false,
+    "ai_score_used": null,
+    "saved_at": "2026-10-24T16:52:41.483377+00:00"
+  },
+  {
+    "match": "达拉斯独行侠 vs 圣安东尼奥马刺",
+    "home": "达拉斯独行侠",
+    "away": "圣安东尼奥马刺",
+    "direction": "圣安东尼奥马刺 胜",
+    "win_prob": 0.274,
+    "predicted_score": "102-122",
+    "commence_time": "2026-10-25T00:10:00Z",
+    "ai_adjusted": false,
+    "ai_score_used": null,
+    "saved_at": "2026-10-24T16:52:41.483377+00:00"
+  },
+  {
+    "match": "亚特兰大老鹰 vs 休斯顿火箭",
+    "home": "亚特兰大老鹰",
+    "away": "休斯顿火箭",
+    "direction": "亚特兰大老鹰 胜",
+    "win_prob": 0.517,
+    "predicted_score": "113-111",
+    "commence_time": "2026-10-25T00:40:00Z",
+    "ai_adjusted": false,
+    "ai_score_used": null,
+    "saved_at": "2026-10-24T16:52:41.483377+00:00"
+  },
+  {
+    "match": "丹佛掘金 vs 新奥尔良鹈鹕",
+    "home": "丹佛掘金",
+    "away": "新奥尔良鹈鹕",
+    "direction": "丹佛掘金 胜",
+    "win_prob": 0.699,
+    "predicted_score": "121-103",
+    "commence_time": "2026-10-25T01:10:00Z",
+    "ai_adjusted": false,
+    "ai_score_used": null,
+    "saved_at": "2026-10-24T16:52:41.483377+00:00"
+  },
+  {
+    "match": "菲尼克斯太阳 vs 金州勇士",
+    "home": "菲尼克斯太阳",
+    "away": "金州勇士",
+    "direction": "菲尼克斯太阳 胜",
+    "win_prob": 0.685,
+    "predicted_score": "120-104",
+    "commence_time": "2026-10-25T02:10:00Z",
+    "ai_adjusted": false,
+    "ai_score_used": null,
+    "saved_at": "2026-10-24T16:52:41.483377+00:00"
   }
 ]

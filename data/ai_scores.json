@@ -123,5 +123,45 @@
     "ai_score": 58,
     "ai_summary": "Solid confidence (0.576) in the Golden State Warriors, but again selecting the favorite rather than an underdog reduces predicted value.",
     "ai_notes": "Good confidence signal, poor underdog alignment."
+  },
+  "夏洛特黄蜂 vs 迈阿密热火": {
+    "ai_score": 75,
+    "ai_summary": "Pick: Miami Heat ML. Stars: 2*, Conf: 45.7%. Good confidence signal despite moderate stats.",
+    "ai_notes": "Low confidence limits upside"
+  },
+  "克利夫兰骑士 vs 布鲁克林篮网": {
+    "ai_score": 85,
+    "ai_summary": "Pick: Cleveland Cavaliers ML. Stars: 2*, Conf: 71.4%. Solid underdog value with strong prediction backing.",
+    "ai_notes": "Meets all priority criteria"
+  },
+  "费城76人 vs 密尔沃基雄鹿": {
+    "ai_score": 88,
+    "ai_summary": "Pick: Philadelphia 76ers ML. Stars: 2*, Conf: 73.7%. Best high-confidence underdog opportunity.",
+    "ai_notes": "Top pick overall"
+  },
+  "芝加哥公牛 vs 华盛顿奇才": {
+    "ai_score": 62,
+    "ai_summary": "Pick: Chicago Bulls ML. Stars: 1*, Conf: 51.7%. Adequate confidence but weak star rating and marginal edge.",
+    "ai_notes": "Marginal value"
+  },
+  "达拉斯独行侠 vs 圣安东尼奥马刺": {
+    "ai_score": 45,
+    "ai_summary": "Pick: San Antonio Spurs ML. Stars: 2*, Conf: 27.4%. Contradictory signals with strong underdog pick but critically low confidence.",
+    "ai_notes": "Unreliable prediction"
+  },
+  "亚特兰大老鹰 vs 休斯顿火箭": {
+    "ai_score": 52,
+    "ai_summary": "Very low confidence (0.517) makes this a weak prediction despite being an underdog pick. The Atlanta Hawks edge is marginal and lacks clear directional strength.",
+    "ai_notes": "High confidence/underdog/clear signal priorities not well met."
+  },
+  "丹佛掘金 vs 新奥尔良鹈鹕": {
+    "ai_score": 78,
+    "ai_summary": "Good confidence (0.699) with a clear Dallas Mavericks win direction. Denver is likely the underdog here, satisfying multiple user priorities effectively.",
+    "ai_notes": "Strong 2-star pick; best balance of confidence and value."
+  },
+  "菲尼克斯太阳 vs 金州勇士": {
+    "ai_score": 75,
+    "ai_summary": "Solid confidence (0.685) and clear Phoenix Suns direction. Phoenix may be a slight underdog or pick-em, offering reasonable value.",
+    "ai_notes": "Slightly lower confidence than Item 2 but still a good quality prediction."
   }
 }
